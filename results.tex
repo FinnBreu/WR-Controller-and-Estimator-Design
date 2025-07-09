@@ -2,6 +2,33 @@
 
 \subsection{Monte-Carlo}
 
+The Monte-Carlo method runs repeated simulations with random variations of parameters.
+In this case, the Monte-Carlo method is used to determine the robustness and sensitivity of the closed-loop system (Rocket, Estimator, Controller) to modelling uncertainty and external disturbances.
+The Monte-Carlo method is used as the simulation is non-linear and has multiple uncertain parameters, such as sensor noise and bias, wind disturbances, actual aerodynamic behaviour, and more. 
+
+In Matlab/Simulink, multiple simulations can be run using the \texttt{parsim} function, which supports sweeping of parameters.
+The computations can be offloaded to a compute server with the \texttt{batchsim} function.
+
+In the flight simulation framework, some parameters are already randomly varied for each simulation, such as the sensor biases.
+Other parameters are explicitly swept between lower and upper limits for the Monte-Carlo simulations, these are listed in Table \ref{tab:monte-carlo-params}. 
+Some parameters are varied for an absolute value (e.g. wind speed), while others are a factor of the nominal value (e.g. engine thrust).
+
+\begin{table}[ht]
+    \centering
+    \begin{tabularx}{\linewidth}{l c c X }
+         Parameter & Lower & Upper & Reason \\[0.2em]
+         \hline \\[-1em]
+         Rocket, engine thrust & $0.8\cdot$ & $1.2\cdot$ & Engine performance variations, impact max. velocity  and altitude \\
+         Wind, const. speed & 0m/s & 20m/s & Weather variations, impact pitch over and velocity estimate \\
+         Wind, gust strength & 0m/s & 20m/s & Weather variations, impact velocity and coefficient estimate \\
+         Canard, coefficient & $-1\cdot$ & $3\cdot$ & Roll reversal, test coefficient estimation \\
+         Canard, backlash & $0^\circ$ & $5^\circ$ & Gearing uncertainty, test coefficient and angle estimation, test controller tracking \\
+         Fin, cant angle & $0^\circ$ & $0.1^\circ$ & Manufacturing variations, test coefficient estimation and controller tracking
+    \end{tabularx}
+    \caption{Swept parameters}
+    \label{tab:monte-carlo-params}
+\end{table}
+
 \section{Hardware in the Loop}
 
 \clearpage

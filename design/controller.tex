@@ -54,13 +54,22 @@ where the roll control derivative is $L_\delta (\bar p,  \,  C_L)$, and the roll
 The matrix $C$ combines the states of the system to an output signal, and can be set arbitrarily for response analysis.
 For the case $C = \begin{bmatrix} I_3 \end{bmatrix}$, the output signal is the entire state vector $y(t) = x(t)$, for the case $C = \begin{bmatrix} 1 & 0 & 0 \end{bmatrix}$, the ouput signal is $y(t) = x_1(t) = \phi$.
 
+The open-loop eigenvalues are simply
+\begin{align}
+    \lambda_1 &= 0 & \lambda_2 &= L_{\omega_x} & \lambda_3 &= -\alpha 
+\end{align}
+The rocket in open-loop is only marginally stable due to the free integrator from the roll rate to roll angle ($\omega_x \to \phi$).
+Additionally, when using a spin can the damping derivative $L_{\omega_x}$ is very small compared to the control derivative $L_\delta$. 
+When assuming $L_{\omega_x} \approx 0$ the open-loop is quadratically unstable.
+
+
+\subsubsection{Controllability}
 The (approximately in continuous time) closed loop is 
 \begin{align}
     \dot x_R &= (A+BK) x_R + B K_{pre} r & y_R &= C x_R
     \label{eq:controller-closedloop}
 \end{align}
 
-\subsubsection{Controllability}
 To determine if pole placement is possible, which is a necessary condition for LQR \cite{werner2021}, the roll model is checked for controllability.
 The controllability matrix is 
 \begin{align}
@@ -71,6 +80,7 @@ The controllability matrix is
 which has full rank for all $L_\delta \neq 0$, i.e. there exists a feasible feedback gain for every flight condition, except for zero velocity ($\lVert v \rVert = 0$) or a zero coefficient of lift ($C_L = 0$).
 
 \subsection{Control law and tuning}
+
 To compute the desired canard angle $u = \delta_u$, the the current rocket roll state as determined by the state estimation is used.
 The control law is a state feedback, combined with a feedforward part for the reference signal $r$ as
 \begin{align}
@@ -97,6 +107,39 @@ The channel $r \to \omega_x$ could also be selected via $C = \begin{bmatrix} 0 &
 The gains $K$ and $K_{pre}$ can be precomputed for each combination of parameters $A(\hat x_{FC})$.
 As gain scheduling is used to account for slowly-varying parameters, the gains are be computed for each design point $x_s$, and combined to a look-up table (see Section \ref{sec:controller-scheduling}).
 This way the implemented controller does not need to compute the gains with the LQR method, but can just select the gains from the gain scheduling table. 
+
+The requirements of the closed-loop system are shown in Table \ref{tab:controller_loopshape}.
+\begin{table}[ht]
+    \centering
+    \begin{tabularx}{\linewidth}{c c | c c | X }
+         $\omega_\text{min}$ & $L_\text{min}$ & $\omega_\text{max}$ & $L_\text{max}$ & Reason \\
+         \hline
+         10 & -20 & 100 & -40 & Low gain required at sampling frequency, noise suppression \\
+         0 & 20 & 0.1 & 20 & Steady-state gain for disturbance rejection \\
+         $\omega_B-$1dec & -20/dec & $\omega_B$+1dec & -30/dec & Closed-loop robustness
+    \end{tabularx}
+    \caption{Loop shape requirements}
+    \label{tab:controller_loopshape}
+\end{table}
+
+The open-loop with controller is (with $C=I$) 
+\begin{align}
+    L(s) &=  K_{pre}\,  K \, C \, \left[sI- A\right]^{-1} B
+\end{align}
+which results in the loop shape shown in Figure \ref{fig:controller_loopshape}.
+The rocket without controller is shown in blue on the rightmost side. 
+While it satisfies the steady-state and high-frequency gain requirements, the high slope in the crossover region would result in an unstable closed-loop.
+The loops with the controller all satisfy the crossover slope requirement of $-20$dB/dec to $-30$dB/dec resulting in a robust closed-loop (loss of robustness through the Estimator is not shown). 
+The high-frequency requirement is however violated, requiring ... 
+
+\emph{gain reduction or rolloff filter}
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.7\linewidth]{images-design/controller_loopshape.png}
+    \caption{Loopshape of open rocket $\to$ controller loop}
+    \label{fig:controller_loopshape}
+\end{figure}
 
 \subsection{Optimal control theory}
 \label{sec:controller-theory}
@@ -126,6 +169,7 @@ The control law is still useful for controlling nonlinear and observed systems, 
 \subsection{Gain scheduling}
 \label{sec:controller-scheduling}
 As the models from canard angle to roll rate are nonlinear and highly dependent on some slowly-varying parameters (the \textit{flight conditions}), a gain-scheduling scheme will be implemented. 
+This is common practice in aerospace applications dealing with different flight conditions \cite{theis2023}.
 The design points $x_s$ of the schedule are characterized by these slowly-varying flight conditions $x_{FC} = \begin{bmatrix} \bar p & C_L \end{bmatrix}$, being the aerodynamic pressure $\bar p$, and the lift coefficient of the canards $C_L$. 
 The simplified model is evaluated around these design points using the current state estimate $A(\hat x_{FC})$, to form the matrix $A$.
 As the LQR method produces guaranteed robustness margins \cite{doyle1978, werner2021, werner2021b}, the  interpolation between two close design points should always produce a stable control loop.

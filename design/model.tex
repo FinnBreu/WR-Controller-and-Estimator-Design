@@ -151,23 +151,28 @@ The time derivative of the quaternion attitude, with angular rates $\omega$ desc
     \end{bmatrix}    
     \label{eq:quaternion-deriv}
 \end{align}
-Time integration leads to the discrete dynamics of a quaternion attitude, described by the rotation with an incremental attitude difference \cite{sola2017, stevens2015} 
+
+For integration to a discrete time update, multiple approaches can be used. 
+The simplest method to implement is explicit Euler with posteriori norming, which assumes small time steps such that the quaternion norm does not deviate far from 1.
+The most accurate discrete time form is probably geometric integration, which preserves the unit constraint for any time step size. It assumes constant angular velocity over the time step to calculate an incremental attitude change $dq_k$ \cite{sola2017} 
+% Time integration leads to the discrete dynamics of a quaternion attitude, described by the rotation with an incremental attitude difference \cite{sola2017, stevens2015} 
 \begin{align}
     q(t + dt) &= q(t) * dq(t,dt) 
-    \qquad \implies
-    \qquad q_{k+1} = \tilde Q_k \cdot dq_k
-    \label{eq:quaternion-update}
-\end{align}
-where for constant angular velocities $\omega$ in this short time frame $dt$, the incremental attitude quaternion $dq$ is \cite{sola2017}
-\begin{align}
-    dq(t, dt) = dq_k &= \begin{bmatrix} \cos(\frac{d\varphi}{2}) \\ dn \sin(\frac{d\varphi}{2})
+    &\implies
+    q_{k+1} &= q_k * dq_k \\
+%    \label{eq:quaternion-update}
+    dq_k &= \begin{bmatrix} \cos(\frac{d\varphi}{2}) \\ dn \sin(\frac{d\varphi}{2})
     \end{bmatrix}
     & d\varphi &= \lVert \omega(t) \rVert dt 
     & dn &= \frac{\omega(t)}{\lVert \omega(t) \rVert}
     \label{eq:quaternion-increment}
 \end{align}
-This is the approximate (truncated Taylor series) closed-form solution of the differential equation \ref{eq:quaternion-deriv}.
-Its explicit, first order, and maintains the unit constraint, thus this form will be used for time integration of the quaternion, rather than explicit Euler for the other derivatives (see Section \ref{sec:numerical-integration}).
+here $q_{k+1}$ is the approximate (first order truncated Taylor series) closed-form solution of the differential equation \ref{eq:quaternion-deriv}.
+% Its explicit, first order, and maintains the unit constraint, thus this form will be used for time integration of the quaternion, rather than explicit Euler for the other derivatives (see Section \ref{sec:numerical-integration}).
+
+
+
+
 
 % \begin{equation}
 %     \begin{bmatrix}
@@ -205,30 +210,39 @@ Its explicit, first order, and maintains the unit constraint, thus this form wil
 %     \end{bmatrix}  
 % \end{align}
 
-
 The rotation matrix is used to transform a vector from one attitude to another, i.e. for the transformation from the body-fixed frame to the inertial frame.
 It can be computed directly from the quaternion \cite{zipfel2007, stevens2015}. 
-The rotation matrix $S = S_{G \to B}$ (or often $S = S^B_G$) transforms a vector from the ground frame $G$ to the body-fixed frame $B$, and is computed as
-%\begin{equation}
-%    S = I + 2 q_w \bm{\tilde q} + 2 \bm{\tilde q} \bm{\tilde q} \label{eq:rotationmatrix}
-%\end{equation}
-\begin{equation}
-    S = 2 q_v q_v^T + (q_w^2-q_v^T q_v) I_3 - 2 q_w \tilde q_v \label{eq:rotationmatrix}
-\end{equation}
+The rotation matrix $S = S_{G \to B}$ (or often $S = S^B_G$) transforms a vector from the ground frame $G$ to the body-fixed frame $B$, and is computed as \cite{stevens2015}
+\begin{align}
+    S &= \begin{bmatrix}
+         q_w^2 + q_x^2 - q_y^2 - q_z^2 & 2 q_w q_z + 2 q_x q_y & 2 q_x q_z - 2 q_w q_y \\
+    2 q_x q_y - 2 q_w q_z & q_w^2 - q_x^2 + q_y^2 - q_z^2 & 2 q_w q_x + 2 q_y q_z \\
+    2 q_w q_y + 2 q_x q_z & 2 q_y q_z - 2 q_w q_x & q_w^2 - q_x^2 - q_y^2 + q_z^2
+    \end{bmatrix} \label{eq:rotationmatrix} \\
+    &= 2 q_v q_v^T + (q_w^2-q_v^T q_v) I_3 - 2 q_w \tilde q_v \nonumber
+\end{align}
 The inverse transformation, i.e. from a vector in $B$ to a vector in $G$, is performed by inverting the transformation matrix. 
 Luckily, the rotation matrix is always orthogonal, so $S^{-1} = S^T$, and thus $S^G_B = S^T$. 
 Additionally, the inverse rotation matrix is the rotation matrix of the inverse quaternion, so $S^T(q) = S(q^{-1})$.
+The rotation $R(q,v) = S(q) \, v$ is equivalent to the operation \cite{stevens2015}
+\begin{align}
+    \begin{bmatrix}
+        0 \\ R(q,v)
+    \end{bmatrix} &= q^{-1} * \begin{bmatrix}
+        0 \\ v
+    \end{bmatrix} *q
+\end{align}
 
 The Euler angles \textit{yaw} $\psi$, \textit{pitch} $\theta$, and \textit{roll} $\phi$ can be recovered from the rotation matrix elements (or directly from the quaternions). 
-For the rotation sequence yaw $\to$ pitch $\to$ roll (order $z\to y \to x$, rotation around the respective new body axes) the Euler angles are 
+For the rotation sequence yaw $\to$ pitch $\to$ roll (order $z\to y \to x$, rotation around the respective new body axes) the Euler angles are  \cite{stevens2015}
 \begin{align}
-    \psi &= \mathrm{atan2}(S_{21}, S_{11}) &
-    \theta &= \mathrm{arcsin}(-S_{31}) &
+    \psi &= \mathrm{atan2}(S_{12}, S_{11}) &
+    \theta &= \mathrm{arcsin}(-S_{13}) &
     \phi &= \mathrm{atan2}(S_{23}, S_{33}) 
     \label{eq:quaternion2euler}
 \end{align}
 
-For initialization, the quaternion is set according to Equation \ref{eq:rotation-theorem}, where $\varphi$ is the launch angle, and $n$ indicates the launch orientation (pitch or yaw) \footnote{Initialization with Euler angles is also possible\cite[p. 126]{zipfel2007}, but too much effort to write down here.}.
+For initialization, the quaternion is set according to Equation \ref{eq:rotation-theorem}, where $\varphi$ is the launch angle, and $n$ indicates the launch orientation (pitch or yaw) \footnote{Initialization with Euler angles is also possible, see \cite{stevens2015}, \cite[p. 126]{zipfel2007}}.
 A typical initialization could be $\varphi = $ launch angle, and $n = [\begin{smallmatrix} 0 & 1 & 0 \end{smallmatrix}]^T$, i.e. the rocket is pitched downrange, and both yaw and roll are defined zero.
 
 \subsubsection{Relative motion}
@@ -446,9 +460,7 @@ The incidence of the rocket relative to the oncoming airstream is defined with t
 As any wind gusts act as disturbances, both $\alpha$ and $\beta$ are defined from the velocity vector of the rocket in the body-fixed frame, as seen in Figure \ref{fig:model_alpha-beta}.
 The angles are therefore
 \begin{align}
-    v_x &> 0 & v_x &= 0 & v_x & < 0 \nonumber \\
-        \alpha &= \arctan(v_z/v_x)  & \alpha &= \pi/2 & \alpha &= \pi - \arctan(v_z/v_x) \\
-        \beta &= - \arctan(v_y/v_x) & \beta &= - \pi/2 & \beta &= - \pi + \arctan(v_y/v_x) 
+        \alpha &= \mathrm{atan2}(v_z, \, v_x) &  \beta &= - \mathrm{atan2}(v_y, \,v_x)
 \end{align}
 Because the rocket is passively stable to movement in the forward direction (as determined by the Flight Dynamics subsystem), this can be approximated as
 \begin{align}
@@ -514,7 +526,7 @@ $C_{N_\alpha}$ & Normal force coefficient, entire rocket
 \end{table}
 
 \subsubsection{Canard airfoil theory}
-\textit{Most of the in-depth development has been done by Luca Scavone, lead of the flight dynamics subsystem \cite{team-flight-luca}}.
+\textit{A more in-depth development has been done by Luca Scavone, lead of the flight dynamics subsystem \cite{team-flight-luca}}.
 The coefficient of lift is approximated using thin airfoil theory \cite{stengel2004}.
 The canards have a triangular (\textit{delta} $\Delta$) shape, with a high \textit{sweep angle} $\Lambda$. 
 The lift coefficient depends on the Mach number of the rocket, as the flow behaviour starts to change near sonic speed.
@@ -647,7 +659,7 @@ It acts as a position control element, which provides a calculated torque to rea
 To provide accurate position feedback to the controller / state estimation, rotary potentiometers are mounted on the canard shafts.
 \begin{figure}[ht]
     \centering
-    \includegraphics[width=0.5\linewidth]{images-design/actuator_cad.png}
+    \includegraphics[width=0.6\linewidth]{images-design/actuator_cad.png}
     \caption[Mechanical design of the actuator]{Mechanical design of the canards actuation assembly \cite{team-controls-ben}.}
     \label{fig:model-actuator-cad}
 \end{figure}
@@ -823,6 +835,6 @@ with the matrices
 \end{align}
 where the roll control derivative is $L_\delta (\bar p,  \,  C_L)$, a function of dynamic pressure and the canard coefficient of lift, i.e. the flight condition.
 Roll damping is modelled by the roll damping derivative $L_{\omega_x} (\bar p, \, C_{L \omega_x})$.
-Roll damping originates almost entirely from fixed fins which resist turning - for freely rolling fins (a spin can), the damping derivative should be zero.
+Roll damping originates almost entirely from fixed fins which resist turning - for freely rolling fins (a spin can), the damping derivative should be very small as approximately only the canards themselves damp rolling motion.
 The 1st order actuator dynamics are accounted for with the $\delta$ state, and are characterized by the time constant $\alpha$, whose value should be determined by experimental system identification.
 Any gear ratio between servo motor and canards may be expressed as a factor of the bottom entry of $B$ (here set to 1).
