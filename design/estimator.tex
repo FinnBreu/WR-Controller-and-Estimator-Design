@@ -9,6 +9,49 @@ As the underlying dynamics are nonlinear in some cases, an \textit{Extended Kalm
 This whole process is a \textit{Bayes filter}, where the state estimate has an associated belief in the accuracy of the estimate.
 Each iteration of the filter uses the the priori (old) state estimate and belief, to compute/update the posteriori (new) estimate and belief.
 
+
+\subsection{Optimal estimation theory}
+\label{sec:estimator_theory}
+\textit{This section is here for completeness, it is not relevant for implementation.}
+The system has continuous-time dynamics and discrete-time measurements \cite{lewis2008}
+\begin{align}
+    \dot x &= f(x, u, t) + w(t) \\
+    y_k &= h(x_k,k) + v_k
+\end{align}
+where $w(t)$ is the process noise and $v_k$ is the measurement noise, which are additive, uncorrelated, and white zero-mean Gaussian processes \cite{lewis2008, werner2021b}. 
+Both processes satisfy \cite{werner2021b} \footnote{Prof. Werner please forgive the butchering of the theory that is to follow}
+\begin{align}
+    \label{eq:estimator_theory_noise}
+    E\left[ w(t) w^T(t+\tau) \right] &= Q_e \delta(t)
+    &
+    E\left[ v_{k} v^T_{k+1} \right] &= R_e \delta(k)
+\end{align}
+The estimation error $\varepsilon = x - \hat x$ is to be minimized in the cost function with weight vector $\varrho$ \cite{werner2021b}
+\begin{equation}
+    \min V = \lim_{t \to \infty} E\left[ \varepsilon^T \varrho \varrho^T \varepsilon \right]
+\end{equation}
+for which the solution is of the form \cite{werner2021b}
+\begin{equation}
+    V^* = \varrho^T P \varrho
+\end{equation}
+In infinite time, $P$ satisfies the filter algebraic Ricatti equation \cite{werner2021b}
+\begin{equation}
+    PF + F^TP - PH^TR_e^{-1}HP + Q_e = 0
+\end{equation}
+This results in the estimator feedback \cite{lewis2008}
+\begin{align}
+    \tilde x &= K_k \left[ y - h(\hat x_k) \right]
+\end{align}
+where the gain $K_k$ is computed with the a-priori covariance estimate $P_k^-$
+\begin{align}
+    K_{k} &= P_{k}^{-} H_k^T \left[ H_k P_{k}^{-} H_k^T + R_e \right]^{-1} 
+\end{align}
+(since the posteriori covariance $P_k$ is dependent on the current gain, the implicit equation would be $K_k = P_k^+ H_k^T R_e^{-1}$).
+
+Due to the nonlinear behaviour of the state space functions, both $P$ and $K_k$ must be computed in real time as new measurements become available \cite{lewis2008}.
+It is to note that the Kalman filter generally is only optimal for the mathematical model, not the actual plant (in this case the rocket) itself \cite{lewis2008}.
+Additionally, the EKF is just quasi-optimal, as optimality is generally only proven for the case of linear state prediction and measurement functions.
+
 \subsection{EKF algorithm}
 The EKF thus propagates a state estimate $\hat x$ in discrete time steps, along with the belief in form of the covariance matrix $P$.
 While the state is the mean estimate, the covariance matrix represents the ``uncertainty'' of the state estimate and their correlation, i.e. higher values represent more uncertainty. 
@@ -86,47 +129,6 @@ where $\bar x_0$ can be computed while the rocket is stationary on the rail, and
 Determining accurate initial values is treated in Section \ref{sec:estimator-initialization}.  
 
 
-\subsection{Optimal estimation theory}
-\label{sec:estimator_theory}
-\textit{This section is here for completeness, it is not relevant for implementation.}
-The system has continuous-time dynamics and discrete-time measurements \cite{lewis2008}
-\begin{align}
-    \dot x &= f(x, u, t) + w(t) \\
-    y_k &= h(x_k,k) + v_k
-\end{align}
-where $w(t)$ is the process noise and $v_k$ is the measurement noise, which are additive, uncorrelated, and white zero-mean Gaussian processes \cite{lewis2008, werner2021b}. 
-Both processes satisfy \cite{werner2021b} \footnote{Prof. Werner please forgive the butchering of the theory that is to follow}
-\begin{align}
-    \label{eq:estimator_theory_noise}
-    E\left[ w(t) w^T(t+\tau) \right] &= Q_e \delta(t)
-    &
-    E\left[ v_{k} v^T_{k+1} \right] &= R_e \delta(k)
-\end{align}
-The estimation error $\varepsilon = x - \hat x$ is to be minimized in the cost function with weight vector $\varrho$ \cite{werner2021b}
-\begin{equation}
-    \min V = \lim_{t \to \infty} E\left[ \varepsilon^T \varrho \varrho^T \varepsilon \right]
-\end{equation}
-for which the solution is of the form \cite{werner2021b}
-\begin{equation}
-    V^* = \varrho^T P \varrho
-\end{equation}
-In infinite time, $P$ satisfies the filter algebraic Ricatti equation \cite{werner2021b}
-\begin{equation}
-    PF + F^TP - PH^TR_e^{-1}HP + Q_e = 0
-\end{equation}
-This results in the estimator feedback \cite{lewis2008}
-\begin{align}
-    \tilde x &= K_k \left[ y - h(\hat x_k) \right]
-\end{align}
-where the gain $K_k$ is computed with the a-priori covariance estimate $P_k^-$
-\begin{align}
-    K_{k} &= P_{k}^{-} H_k^T \left[ H_k P_{k}^{-} H_k^T + R_e \right]^{-1} 
-\end{align}
-(since the posteriori covariance $P_k$ is dependent on the current gain, the implicit equation would be $K_k = P_k^+ H_k^T R_e^{-1}$).
-
-Due to the nonlinear behaviour of the state space functions, both $P$ and $K_k$ must be computed in real time as new measurements become available \cite{lewis2008}.
-It is to note that the Kalman filter generally is only optimal for the mathematical model, not the actual plant (in this case the rocket) itself \cite{lewis2008}.
-Additionally, the EKF is just quasi-optimal, as optimality is generally only proven for the case of linear state prediction and measurement functions.
 
 \subsection{Filter tuning}
 \label{sec:estimator-tuning}
@@ -239,3 +241,4 @@ With the filtered data $s$, the state can be computed using the sensor models as
 \label{sec:hard-calibration}
 The orientation of all sensor frames ($S_\Omega, S_A, S_M$) to the rocket body must be determined \textit{well before} launch day.
 Additionally, the position of the accelerometers $d_A$ to the dry center of gravity, and the the hard ($b_{HI}$) and soft ($B_{SI}$) iron biases for the magnetometer correction should be determined.
+

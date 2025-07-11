@@ -52,7 +52,7 @@ with the matrices (Equations \ref{eq:controller-model-matrices})
 \end{align}
 where the roll control derivative is $L_\delta (\bar p,  \,  C_L)$, and the roll damping derivative is $L_{\omega_x} (\bar p, \, C_{L \omega_x})$.
 The matrix $C$ combines the states of the system to an output signal, and can be set arbitrarily for response analysis.
-For the case $C = \begin{bmatrix} I_3 \end{bmatrix}$, the output signal is the entire state vector $y(t) = x(t)$, for the case $C = \begin{bmatrix} 1 & 0 & 0 \end{bmatrix}$, the ouput signal is $y(t) = x_1(t) = \phi$.
+For the case $C = \begin{bmatrix} I_3 \end{bmatrix}$, the output signal is the entire state vector $y(t) = x(t)$, for the case $C = \begin{bmatrix} 1 & 0 & 0 \end{bmatrix}$, the output signal is $y(t) = x_1(t) = \phi$.
 
 The open-loop eigenvalues are simply
 \begin{align}
@@ -77,7 +77,55 @@ The controllability matrix is
         B & AB & A^2 B 
     \end{bmatrix}
 \end{align}
-which has full rank for all $L_\delta \neq 0$, i.e. there exists a feasible feedback gain for every flight condition, except for zero velocity ($\lVert v \rVert = 0$) or a zero coefficient of lift ($C_L = 0$).
+which has full rank for all $L_\delta \neq 0$, i.e. there exists a feasible feedback gain for every flight condition, except for zero dynamic pressure ($\lVert v \rVert = 0$ or $\rho = 0$) or a zero coefficient of lift ($C_L = 0$).
+
+\subsection{Gain scheduling}
+\label{sec:controller-scheduling}
+As the models from canard angle to roll rate are nonlinear and highly dependent on some slowly-varying parameters (the \textit{flight conditions}), a gain-scheduling scheme will be implemented. 
+This is common practice in aerospace applications dealing with different flight conditions \cite{theis2023}.
+The design points $x_s$ of the schedule are characterized by these slowly-varying flight conditions $x_{FC} = \begin{bmatrix} \bar p & C_L \end{bmatrix}$, being the aerodynamic pressure $\bar p$, and the lift coefficient of the canards $C_L$. 
+The simplified model is evaluated around these design points using the current state estimate $A(\hat x_{FC})$, to form the matrix $A$.
+As the LQR method produces guaranteed robustness margins \cite{doyle1978, werner2021, werner2021b}, the  interpolation between two close design points should always produce a stable control loop.
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.95\textwidth]{images-design/controller_scheduling-surfaces.png}
+    \caption[Scheduling surfaces along dynamic pressure and canard coefficient]{Scheduling surfaces along dynamic pressure $\bar p$ and canard coefficient of lift $C_L$. Feedback gains $K_\phi, K_p, K_\delta$ and reference gain $K_\textit{pre}$.}
+    \label{fig:controller-surfaces}
+\end{figure}
+
+A large variety of design points are chosen, both along the nominal flight profile, but also encompassing a larger flight envelope to accommodate off-nominal trajectories.
+Design points for the condition $L_\delta = 0$ are omitted from the tuning process, as the system is not controllable there.
+The control gains for all design points are computed beforehand and stored in a look-up table.
+In flight, the control algorithms interpolate the gains from the look-up table according to the current state estimate. 
+The pre-computed feedback gains for the roll model are shown in Figure \ref{fig:controller-surfaces}, plotted over the scheduling variables $\bar p$ and $C_L$.
+To note is the discontinuity at $\bar p = 0$ and especially at $C_L = 0$, where no feasible design points exist. 
+The feedback gains are interpolated over this split.
+
+\subsection{Optimal control theory}
+\label{sec:controller-theory}
+\textit{This section is here for completeness, it is not relevant for implementation.}
+The LQR method uses the weighting matrices $Q$ and $R$ to solve the linear quadratic optimization problem \cite{werner2021b} \footnote{I think this came out better than the estimation theory, please be kind Prof. Werner, Prof. Faulwasser}
+\begin{equation}
+    \min V = \int_0^{\infty} (x^T(t) Q x(t) + u^T(t) R u(t)) dt
+\end{equation}
+for which the solution is of the form 
+\begin{equation}
+    V^* = x^T P x
+\end{equation}
+In infinite time, $P$ satisfies the algebraic Ricatti equation 
+\begin{equation}
+    PA + A^TP - PBR^{-1}B^TP + Q = 0
+\end{equation}
+which results in the control law
+\begin{align}
+    u^*(t) &= K x(t) \\
+    K &= -R^{-1}B^TP
+\end{align}
+The resulting controller for the linear system is optimal in the trade-off of minimizing the state error $x(t)$ and control effort $u(t)$ \cite{werner2021}.
+The closed-loop is guaranteed to be stable \cite{werner2021b}, and has margins of $[\infty, 0.5]$ in gain and $60^\circ$ in phase. 
+This guarantee is only valid however for linear systems with full state measurements \cite{doyle1978}.
+The control law is still useful for controlling nonlinear and observed systems, as the robustness properties can be partially preserved \cite{werner2021b}.
+
 
 \subsection{Control law and tuning}
 
@@ -108,7 +156,7 @@ The gains $K$ and $K_{pre}$ can be precomputed for each combination of parameter
 As gain scheduling is used to account for slowly-varying parameters, the gains are be computed for each design point $x_s$, and combined to a look-up table (see Section \ref{sec:controller-scheduling}).
 This way the implemented controller does not need to compute the gains with the LQR method, but can just select the gains from the gain scheduling table. 
 
-The requirements of the closed-loop system are shown in Table \ref{tab:controller_loopshape}.
+The requirements of the control loop are shown in Table \ref{tab:controller_loopshape}.
 \begin{table}[ht]
     \centering
     \begin{tabularx}{\linewidth}{c c | c c | X }
@@ -126,13 +174,13 @@ The open-loop with controller is (with $C=I$)
 \begin{align}
     L(s) &=  K_{pre}\,  K \, C \, \left[sI- A\right]^{-1} B
 \end{align}
-which results in the loop shape shown in Figure \ref{fig:controller_loopshape}.
-The rocket without controller is shown in blue on the rightmost side. 
-While it satisfies the steady-state and high-frequency gain requirements, the high slope in the crossover region would result in an unstable closed-loop.
-The loops with the controller all satisfy the crossover slope requirement of $-20$dB/dec to $-30$dB/dec resulting in a robust closed-loop (loss of robustness through the Estimator is not shown). 
-The high-frequency requirement is however violated, requiring ... 
+which results in different $L$ for every flight condition.
+The loop shapes of different $L$ are shown in Figure \ref{fig:controller_loopshape}.
 
-\emph{gain reduction or rolloff filter}
+The rocket loop without controller is shown in blue on the rightmost side. 
+While it satisfies the steady-state and high-frequency gain requirements, the high slope in the crossover region would result in an unstable closed-loop.
+The loops with controller all approximately satisfy the crossover slope requirement of $-20$dB/dec to $-30$dB/dec resulting in a robust closed-loop (loss of robustness through the Estimator is not shown). 
+The high-frequency requirement is however violated, requiring a lower bandwidth.
 
 \begin{figure}[ht]
     \centering
@@ -141,52 +189,7 @@ The high-frequency requirement is however violated, requiring ...
     \label{fig:controller_loopshape}
 \end{figure}
 
-\subsection{Optimal control theory}
-\label{sec:controller-theory}
-\textit{This section is here for completeness, it is not relevant for implementation.}
-The LQR method uses the weighting matrices $Q$ and $R$ to solve the linear quadratic optimization problem \cite{werner2021b} \footnote{I think this came out better than the estimation theory, please be kind Prof. Werner, Prof. Faulwasser}
-\begin{equation}
-    \min V = \int_0^{\infty} (x^T(t) Q x(t) + u^T(t) R u(t)) dt
-\end{equation}
-for which the solution is of the form 
-\begin{equation}
-    V^* = x^T P x
-\end{equation}
-In infinite time, $P$ satisfies the algebraic Ricatti equation 
-\begin{equation}
-    PA + A^TP - PBR^{-1}B^TP + Q = 0
-\end{equation}
-which results in the control law
-\begin{align}
-    u^*(t) &= K x(t) \\
-    K &= -R^{-1}B^TP
-\end{align}
-The resulting controller for the linear system is optimal in the trade-off of minimizing the state error $x(t)$ and control effort $u(t)$ \cite{werner2021}.
-The closed-loop is guaranteed to be stable \cite{werner2021b}, and has margins of $[\infty, 0.5]$ in gain and $60^\circ$ in phase. 
-This guarantee is only valid however for linear systems with full state measurements \cite{doyle1978}.
-The control law is still useful for controlling nonlinear and observed systems, as the robustness properties can be partially preserved \cite{werner2021b}.
 
-\subsection{Gain scheduling}
-\label{sec:controller-scheduling}
-As the models from canard angle to roll rate are nonlinear and highly dependent on some slowly-varying parameters (the \textit{flight conditions}), a gain-scheduling scheme will be implemented. 
-This is common practice in aerospace applications dealing with different flight conditions \cite{theis2023}.
-The design points $x_s$ of the schedule are characterized by these slowly-varying flight conditions $x_{FC} = \begin{bmatrix} \bar p & C_L \end{bmatrix}$, being the aerodynamic pressure $\bar p$, and the lift coefficient of the canards $C_L$. 
-The simplified model is evaluated around these design points using the current state estimate $A(\hat x_{FC})$, to form the matrix $A$.
-As the LQR method produces guaranteed robustness margins \cite{doyle1978, werner2021, werner2021b}, the  interpolation between two close design points should always produce a stable control loop.
-\begin{figure}[ht]
-    \centering
-    \includegraphics[width=0.95\textwidth]{images-design/controller_scheduling-surfaces.png}
-    \caption[Scheduling surfaces along dynamic pressure and canard coefficient]{Scheduling surfaces along dynamic pressure $\bar p$ and canard coefficient of lift $C_L$. Feedback gains $K_\phi, K_p, K_\delta$ and reference gain $K_\textit{pre}$.}
-    \label{fig:controller-surfaces}
-\end{figure}
-
-A large variety of design points are chosen, both along the nominal flight profile, but also encompassing a larger flight envelope to accommodate off-nominal trajectories.
-Design points for the condition $L_\delta = 0$ are omitted from the tuning process, as the system is not controllable there.
-The control gains for all design points are computed beforehand and stored in a look-up table.
-In flight, the control algorithms interpolate the gains from the look-up table according to the current state estimate. 
-The pre-computed feedback gains for the roll model are shown in Figure \ref{fig:controller-surfaces}, plotted over the scheduling variables $\bar p$ and $C_L$.
-To note is the discontinuity at $\bar p = 0$ and especially at $C_L = 0$, where no feasible design points exist. 
-The feedback gains are interpolated over this split.
 
 
 \subsection{Response analysis}
@@ -223,5 +226,6 @@ The Bode plots of the closed-loop for a collection of parameters (here varying v
     The response is cut off above the sampling frequency of the processor.}
     \label{fig:controller-bodes}
 \end{figure}
+
 
 
