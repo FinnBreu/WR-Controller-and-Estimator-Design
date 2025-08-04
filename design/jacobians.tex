@@ -31,7 +31,7 @@ For example, the IMU measurement Jacobian is
 \label{sec:jacobians-kinematics}
 
 \subsubsection{Quaternion Time Update}
-Recall: Quaternion mutliplication from Equation \ref{eq:quaternion-mult}
+Recall: Quaternion mutliplication from \autoref{eq:quaternion-mult}
 \begin{align}
     p &= q * r = \tilde Q \cdot r &
     \tilde Q &= \begin{bmatrix}
@@ -41,7 +41,7 @@ Recall: Quaternion mutliplication from Equation \ref{eq:quaternion-mult}
         q_z & -q_y & q_x & q_w
     \end{bmatrix} 
 \end{align}
-and the time derivative from Equation \ref{eq:quaternion-deriv}
+and the time derivative from \autoref{eq:quaternion-deriv}
 \begin{align}
     \dot q \;
     &= \; \frac{1}{2} q * \begin{bmatrix}
@@ -77,7 +77,7 @@ The Jacobian matrices for the quaternions time derivative are then
     \end{bmatrix} 
 \end{align}
 
-The discrete quaternion update is %from Equation \ref{eq:quaternion-update}
+The discrete quaternion update is %from \autoref{eq:quaternion-update}
 \begin{align}
     q(t + dt) &= q(t) * dq(t,dt) 
     \qquad \implies
@@ -109,7 +109,7 @@ The rotation operation $R$ of a vector $u$ by a quaternion $q$ to a vector $v$ (
 \begin{equation}
     v = R (q, u ) = S u = q * \begin{bmatrix} 0 \\ u \end{bmatrix} * q^{-1}
 \end{equation}
-with the rotation matrix (see Equation \ref{eq:rotationmatrix})
+with the rotation matrix (see \autoref{eq:rotationmatrix})
 \begin{align}
     S &= 2 q_v q_v^T + (q_w^2-q_v^T q_v) I_3 - 2 q_w \tilde q_v \\
     &= \begin{bmatrix}
@@ -136,7 +136,7 @@ and the Jacobian of rotation after the quaternion $q$ is
 
 
 \subsubsection{Relative motion}
-Position update in inertial frame from Equation \ref{eq:model-pos-deriv}
+Position update in inertial frame from \autoref{eq:model-pos-deriv}
 is 
 \begin{align}
     r^+ &= r + dt \, S^T v
@@ -162,7 +162,7 @@ with ($\tilde v$ would be the same structure, substitute $u$ with $v$)
     \end{bmatrix} 
 \end{align}
 
-The velocity update in the body-fixed frame from Equation \ref{eq:meas-veldot} is
+The velocity update in the body-fixed frame from \autoref{eq:meas-veldot} is
 \begin{align}
     v^+ = v + dt \, (a -\omega \times v + S g^G)
 \end{align}
@@ -173,7 +173,7 @@ which results in the Jacobians
     v^+_v &= I_3 - dt \, \tilde \omega\\
 \end{align}
 
-The angular rate update in the body-fixed frame from Equation \ref{eq:model-rate-deriv} is
+The angular rate update in the body-fixed frame from \autoref{eq:model-rate-deriv} is
 \begin{align}
    \omega^+ &= \omega + dt \, J^{-1} (\mathcal{T} - \omega \times J \omega)
 \end{align}
@@ -184,7 +184,7 @@ when the torque $\mathcal{T}$ is assumed to be constant w.r.t $\rho(l)$, this re
     \omega^+_{C_L} &= dt \, J^{-1} \mathcal{T}_{C_L} \\
     \omega^+_\delta &= dt \, J^{-1} \mathcal{T}_\delta
 \end{align}
-where the torque Jacobians $\mathcal{T}_x$ are derived in Section \ref{sec:jacobians-aero}.
+where the torque Jacobians $\mathcal{T}_x$ are derived in \autoref{sec:jacobians-aero}.
 
 
 \subsection{Sensor measurements}
@@ -200,7 +200,7 @@ and the Jacobian of the magnetic field measurement is
 \begin{align}
     M_q &= R_q(q,M_E^G)
 \end{align}
-The pressure measurement has the Jacobian (derived in Section \ref{sec:appendix-atmosphere})
+The pressure measurement has the Jacobian (derived in \autoref{sec:appendix-atmosphere})
 \begin{align}
     P_l &= p_l
 \end{align}
@@ -324,7 +324,7 @@ With the theoretical value from Equations \ref{eq:model_airfoil-subsonic} and \r
 As the theoretical value is very cumbersome to partially differentiate, it is practical to assume it linear respective all variables. 
 %This is of course not actually the case, but the convergence function \ref{eq:jacobian-cl-update} may have a small enough $\alpha_c$ for this assumption to hold approximately.
 The curve goes through $C_L(\mathrm{Ma}=1)$, and $C_L(\mu = \Lambda)$ which corresponds to the supercritical Mach number, where the shock wave angle is equal or greater than the canard leading edge.
-The supercritical point is $\mathrm{Ma} = \frac{1}{\cos(\Lambda)}$, and the linear approximation is (shown in Figure \ref{fig:jacobian-canard-airfoil})
+The supercritical point is $\mathrm{Ma} = \frac{1}{\cos(\Lambda)}$, and the linear approximation is (shown in \autoref{fig:jacobian-canard-airfoil})
 \begin{align}
     \mathrm{Ma} &\leq  1: & C_{L\text{, linear}} &= 2 \pi\cot(\Lambda)
     \\

@@ -44,7 +44,7 @@ To get a new discrete state for the prediction process of the EKF from the conti
 \end{align}
 have to be solved. 
 As the last state estimate is available as an initial value, this can be expressed as an \textit{Initial Value Problem} (IVP). 
-The IVP can be solved by numerical integration, see Equation \ref{eq:estimator-ivp}
+The IVP can be solved by numerical integration, see \autoref{eq:estimator-ivp}
 \begin{align}
      \hat x_k^- &= \underbrace{\int_{t-dt}^{t} \dot{\hat x}(t,x,u) d\tau}_{f_D(x,u)}
      &
@@ -85,7 +85,7 @@ which results in the simple formula
 \begin{align}
     x_{n+1} &= x_n + \varepsilon f \left( t_n, \; x_n, \ u_n \right)
 \end{align}
-Other integration methods can be formulated similarly, for example the discrete update function of the quaternion kinematics\footnote{As unit quaternions are used for attitude description, they have to be either normed after each Euler integration, or the discrete update has to follow their geometric structure, as shown in the Equation above.}. % in Equation \ref{eq:quaternion-update}.
+Other integration methods can be formulated similarly, for example the discrete update function of the quaternion kinematics\footnote{As unit quaternions are used for attitude description, they have to be either normed after each Euler integration, or the discrete update has to follow their geometric structure, as shown in the Equation above.}. % in \autoref{eq:quaternion-update}.
 The second order ($s=2$) butcher tableau of the Heun method \cite{griffiths2010} is 
 % which is used for the prediction covariance, is  
 \begin{equation}

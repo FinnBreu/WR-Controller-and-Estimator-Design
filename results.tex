@@ -10,37 +10,97 @@ In Matlab/Simulink, multiple simulations can be run using the \texttt{parsim} fu
 The computations can be offloaded to a compute server with the \texttt{batchsim} function.
 
 In the flight simulation framework, some parameters are already randomly varied for each simulation, such as the sensor biases.
-Other parameters are explicitly swept between lower and upper limits for the Monte-Carlo simulations, these are listed in Table \ref{tab:monte-carlo-params}. 
+Other parameters are explicitly swept between lower and upper limits for the Monte-Carlo simulations, these are listed in \autoref{tab:monte-carlo-params}. 
 Some parameters are varied for an absolute value (e.g. wind speed), while others are a factor of the nominal value (e.g. engine thrust).
 
 \begin{table}[ht]
     \centering
-    \begin{tabularx}{\linewidth}{l c c X }
-         Parameter & Lower & Upper & Reason \\[0.2em]
+    \begin{tabularx}{\linewidth}{l c c c c X }
+         Parameter & Nom. & $>$ & $<$ & Unit & Reason \\[0.2em]
          \hline \\[-1em]
-         Rocket, engine thrust & $0.8\cdot$ & $1.2\cdot$ & Engine performance variations, impact max. velocity  and altitude \\
-         Wind, const. speed & 0m/s & 20m/s & Weather variations, impact pitch over and velocity estimate \\
-         Wind, gust strength & 0m/s & 20m/s & Weather variations, impact velocity and coefficient estimate \\
-         Canard, coefficient & $-1\cdot$ & $3\cdot$ & Roll reversal, test coefficient estimation \\
-         Canard, backlash & $0^\circ$ & $5^\circ$ & Gearing uncertainty, test coefficient and angle estimation, test controller tracking \\
-         Fin, cant angle & $0^\circ$ & $0.1^\circ$ & Manufacturing variations, test coefficient estimation and controller tracking
+         Engine &&&&& \\
+         thrust & 1 & 0.85 & 1.05 & $\cdot$ & Performance variations $\to$ velocity and apogee \\
+         %\hline \\[-1em]
+         Wind \\ const. speed & 0 & 0 & 20 & m/s & Weather variations, causes pitch over \\
+         gust speed & 0 & 0 & 30 & m/s  & Weather, test velocity and coefficient estimate \\
+         %\hline \\[-1em]
+         Canard \\ coefficient & 1 & $-1$ & $2$ & $\cdot$ & Roll reversal, test coefficient estimation \\
+         backlash & 0 & 0 & 1 & deg & Gearing uncertainty, test coefficient and angle estimation, test controller tracking \\
+         cant angle & 0 & 0 & 0.5 & deg & Actuator misalignment variations, test spin up during boost and controller tracking
     \end{tabularx}
-    \caption{Swept parameters}
+    \caption{Sweep parameters for Monte-Carlo simulations}
     \label{tab:monte-carlo-params}
 \end{table}
+
+\begin{figure}[ht]
+    \centering
+    \begin{subfigure}{\textwidth}
+        \centering
+        \includegraphics[width=0.4\textwidth]{images-results/controller_simulation_20250715_batch_all_1.png}
+        \caption{Controller roll angle}
+        \label{fig:result_mc_all_1_control}
+    \end{subfigure}
+    \begin{subfigure}{\textwidth}
+        \centering
+        \includegraphics[width=0.95\textwidth]{images-results/estimator-simulation_20250715_batch_all_1.png}
+        \caption{Estimator}
+        \label{fig:result_mc_all_1_est}
+    \end{subfigure}
+    \begin{subfigure}{\textwidth}
+        \centering
+        \includegraphics[width=0.95\textwidth]{images-results/estimator-simulation_20250715_batch_all_1_error.png}
+        \caption{Estimation error}
+        \label{fig:result_mc_all_1_error}
+    \end{subfigure}
+    \caption{Monte-Carlo simulation run varying all parameters}
+    \label{fig:result_mc_all_1}
+\end{figure}
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=\linewidth]{images-results/result_stats_control_fixaccel_300.png}
+    \caption{Statistics of controller variables for Monte-Carlo with 300 simulations}
+    \label{fig:results_mc_stat_control}
+\end{figure}
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=\linewidth]{images-results/result_stats_sim_fixaccel_300.png}
+    \caption{Statistics of simulation state for Monte-Carlo with 300 simulations}
+    \label{fig:results_mc_stat_sim}
+\end{figure}
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=\linewidth]{images-results/result_stats_est_fixaccel_300.png}
+    \caption{Statistics of estimated state for Monte-Carlo with 300 simulations}
+    \label{fig:results_mc_stat_est}
+\end{figure}
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=\linewidth]{images-results/result_stats_error_fixaccel_300.png}
+    \caption{Statistics of estimation error for Monte-Carlo with 300 simulations}
+    \label{fig:results_mc_stat_error}
+\end{figure}
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.65\linewidth]{images-results/result_stats_cov_fixaccel_300.png}
+    \caption{Statistics of covariance matrix for Monte-Carlo with 300 simulations}
+    \label{fig:results_mc_stat_cov}
+\end{figure}
+
+
 
 \section{Hardware in the Loop}
 
 \clearpage
 \section{Testflight}
 The Testflight launch was conducted on May 10th 2025 near Louisville, Kentucky.
-The resulting state estimation data is shown in Figure \ref{fig:testflight}.
+The resulting state estimation data is shown in \autoref{fig:testflight}.
 
 Due to an error with internal logging only the telemetry data is available. This data was transmitted by the Processor Board to the rocket CAN bus, sent over radio telemetry, and logged by the ground station computer.
 Due to the telemetry bandwidth and lossy connection, data points are not recorded at high speeds and regular intervals, and in some cases bits were dropped resulting in larger jumps of the data (e.g. at about $t=8\mathrm{s}$, the altitude jumps from 250m to 512m instead of 256m).   
 
 Due to a safety lockout triggered by a timer, the canard was commanded to zero for the entirety of the flight.
-Therefore the rocket had no control authority, and some misalignment of the canards and fin cant led to a slow roll rate with a peak of about 2 rad/s, as can be seen in Figure \ref{fig:testflight-w}.
+Therefore the rocket had no control authority, and some misalignment of the canards and fin cant led to a slow roll rate with a peak of about 2 rad/s, as can be seen in \autoref{fig:testflight-w}.
 
 The rocket lifts off at about $t=8\mathrm{s}$, and reaches apogee at about $t=28\mathrm{s}$.
 At $t=31\mathrm{s}$ the recovery system is deployed, at which point the mission of the Controls subsystem ends. 

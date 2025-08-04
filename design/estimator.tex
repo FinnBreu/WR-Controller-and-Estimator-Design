@@ -65,7 +65,7 @@ Together with the solution of the previous filter iteration, this yields the \te
      \hat x (t-dt) &= \hat x_{k-1}^+
      \label{eq:estimator-ivp}
 \end{align}
-The discrete solution $\hat x_k^-$ of the IVP is computed by numerical integration (see Section \ref{sec:numerical-integration}), which can be as simple as \textit{explicit Euler}: $x_k = x_{k-1} + T \cdot \dot x$.
+The discrete solution $\hat x_k^-$ of the IVP is computed by numerical integration (see \autoref{sec:numerical-integration}), which can be as simple as \textit{explicit Euler}: $x_k = x_{k-1} + dt \cdot \dot x$.
 As the IVP is solved in each filter iteration, the integration bounds are the timestamps of the previous and current iteration, with the sampling rate $T$.
 The numerical solution (of the integral) is then the discrete update function $f_D$.
 
@@ -77,7 +77,7 @@ Essentially, the Jacobians
     H(x) &= \frac{\partial h}{\partial x}
 \end{align}
 indicate how much the outputs of the functions $f_D$ and $h$ change for small changes of each state variable. 
-As the the filter is computed at sufficiently short (see Section \ref{sec:estimator-implementation}) time intervals, the state does not change greatly between each computation step.
+As the the filter is computed at sufficiently short (see \autoref{sec:estimator-implementation}) time intervals, the state does not change greatly between each computation step.
 The functions $f_D$ and $h$ can be approximated by linearization, and the covariance is propagated using the resulting Jacobians.
 
 \subsubsection{Filter process}
@@ -95,16 +95,16 @@ One complete iteration of the algorithm of the discrete EKF is \cite{lewis2008, 
 \end{align}
 
 where the measurements are used for the state correction, while the control input is used for prediction.
-Here the prediction part consists of the (now integrated) discrete-time dynamics (Equation \ref{eq:predict_state}) and the associated covariance in discrete-time (Equation \ref{eq:predict_cova}).
+Here the prediction part consists of the (now integrated) discrete-time dynamics (\autoref{eq:predict_state}) and the associated covariance in discrete-time (\autoref{eq:predict_cova}).
 
-The correction part computes the filter gain (or Kalman gain) $K_k$ using the covariance of the estimate $P$ and the sensitivity of the measurement model $H$ (Equation \ref{eq:update_gain}).
-As the measurement model is discrete, the computation of the predicted measurements ($\hat y = h(t,\hat x_k^-)$) and the correction of the state estimate (Equation \ref{eq:update_state}) is straightforward.
-The covariance of the estimate is updated  (Equation \ref{eq:update_cova}) using the Joseph stabilized form, to ensure the covariance remains positive semidefinite, even if the gain $K_k$ is ``suboptimal'' \cite{lewis2008}.
+The correction part computes the filter gain (or Kalman gain) $K_k$ using the covariance of the estimate $P$ and the sensitivity of the measurement model $H$ (\autoref{eq:update_gain}).
+As the measurement model is discrete, the computation of the predicted measurements ($\hat y = h(t,\hat x_k^-)$) and the correction of the state estimate (\autoref{eq:update_state}) is straightforward.
+The covariance of the estimate is updated  (\autoref{eq:update_cova}) using the Joseph stabilized form, to ensure the covariance remains positive semidefinite, even if the gain $K_k$ is ``suboptimal'' \cite{lewis2008}.
 
-The EKF is tuned using the weighting matrices $Q_e$ and $R_e$, which represented the expected noise covariances of plant and measurement (see Section \ref{sec:estimator-tuning}).
+The EKF is tuned using the weighting matrices $Q_e$ and $R_e$, which represented the expected noise covariances of plant and measurement (see \autoref{sec:estimator-tuning}).
 
 To note: both the prediction and the correction step can be performed multiple times, if (for example) a measurement is missed due to sensor fault, or respectively if multiple sensors are available and the measurements come in sequentially.
-Correcting sequentially can also be useful to avoid inverting large matrices (in Equation \ref{eq:update_gain}).
+Correcting sequentially can also be useful to avoid inverting large matrices (in \autoref{eq:update_gain}).
 As this rocket design uses multiple IMUs (each with their own $y_{IMU}$), the Correction is run multiple time sequentially, to include the encoder and each of the IMUs.
 All sensors have their own measurement model (and bias), Jacobian, and weighting.
 
@@ -116,9 +116,11 @@ The observability matrix (with the number of states $n=13$) is
         H \\ H F_D \\ H F_D^2 \\ \vdots \\ H F_D^n
     \end{bmatrix}
 \end{equation}
-which has rank 12 for the given model, i.e. the system is not fully observable. 
-The reason is the lack of an absolute measurement in attitude, as the magnetometer measurement is invariant for rotations about the magnetic field vector. 
-This will result in slow attitude drift from the true value, which is still an improvement over simply integrating the rate gyroscopes as the magnetometer constrains the attitude in the other two degrees of freedom.\footnote{For vehicles in straight and level movement, like ships, cars, and even airplanes, this is corrected by accelerometers measuring the gravity vector. However, the rocket will be in free fall the entire flight and measuring gravity is not possible using accelerometers.}
+which has lowest rank (in all randomly tried combinations) of 12 for the given model, i.e. the system is not fully observable. 
+This seems to be due to the canard coefficient $C_L$ not being measured, and having being undetermined for $\delta=0$.
+%The reason is the lack of an absolute measurement in attitude, as the magnetometer measurement is invariant for rotations about the magnetic field vector. 
+%This will result in slow attitude drift from the true value, which is still an improvement over simply integrating the rate gyroscopes as the magnetometer constrains the attitude in the other two degrees of freedom.
+%\footnote{For vehicles in straight and level movement, like ships, cars, and even airplanes, this is corrected by accelerometers measuring the gravity vector. However, the rocket will be in free fall the entire flight and measuring gravity is not possible using accelerometers.}
 
 \subsubsection{Initialization}
 The EKF is initialized by setting the state estimate and the covariance estimate to 
@@ -126,13 +128,13 @@ The EKF is initialized by setting the state estimate and the covariance estimate
     \hat x (0) &= \bar x_0 & P(0) &= \bar P_0
 \end{align}
 where $\bar x_0$ can be computed while the rocket is stationary on the rail, and $\bar P_0$ is the uncertainty of the initial state (often quite low).
-Determining accurate initial values is treated in Section \ref{sec:estimator-initialization}.  
+Determining accurate initial values is treated in \autoref{sec:estimator-initialization}.  
 
 
 
 \subsection{Filter tuning}
 \label{sec:estimator-tuning}
-As seen in Equation \ref{eq:estimator_theory_noise}, the tuning matrices $Q_e$ and $R_e$ represent the expected noise magnitudes of the state process and the measurements.
+As seen in \autoref{eq:estimator_theory_noise}, the tuning matrices $Q_e$ and $R_e$ represent the expected noise magnitudes of the state process and the measurements.
 Higher values in the matrices indicate a higher noise magnitude, i.e. lower trust in the accuracy of the measurement.
 The EKF is be tuned by adjusting the entries of these matrices, which must be positive semi-definite.
 The matrices can be filled to account for cross-covariance between the states or measurements (e.g. higher altitude or higher speed lowers accuracy of pressure measurement).
@@ -146,7 +148,7 @@ Here, the entries can represent expected disturbances of the rocket flight, and 
 Closed-loop stability depends on the robustness margins of the combined plant-estimator-controller loop.
 As shown in \cite{doyle1978}, using a state observer inside the control loop \textit{could} lead to vanishing margins.
 This can lead to instability, if the plant models do not match reality perfectly.
-To recover some of the robustness margins of the optimal controller (see Section \ref{sec:controller-theory}), a simple loop transfer recovery method is employed \cite{werner2021}
+To recover some of the robustness margins of the optimal controller (see \autoref{sec:controller-theory}), a simple loop transfer recovery method is employed \cite{werner2021}
 \begin{align}
     Q_e \quad \to \quad Q_e + \sigma B_e
 \end{align}
@@ -157,7 +159,7 @@ In practice, this means that for higher weights in the $\delta$/$\delta$ field o
 
 \subsection{Response analysis}
 The performance of the EKF is evaluated by comparing the true and estimated states in simulation (for the simulation see Chapter \ref{ch:plant}).
-The response for a simulated test flight are shown in Figure \ref{fig:estimator-response}, where the true state $x$ is compared to the estimated state $\hat x$.
+The response for a simulated test flight are shown in \autoref{fig:estimator-response}, where the true state $x$ is compared to the estimated state $\hat x$.
 \begin{figure}[ht!]
     \centering
     \includegraphics[width=\textwidth]{images-design/estimator-simulation.png}
@@ -166,12 +168,12 @@ The response for a simulated test flight are shown in Figure \ref{fig:estimator-
 \end{figure}
 Both the body rates and the altitude (bottom row) are estimated very well, which is due to the rate gyroscope measuring the state directly, and the barometer with an accurate atmosphere model having a direct coupling between measurement and state.
 The attitude quaternion (top left) is also estimated quite well due to having both rate integrals and the magnetic field measurements. 
-The gyroscope bias is determined on the launch pad (see Section \ref{sec:estimator-initialization}) which leads to low drift, and the magnetometer measurement further reduces perturbations from the true attitude.
+The gyroscope bias is determined on the launch pad (see \autoref{sec:estimator-initialization}) which leads to low drift, and the magnetometer measurement further reduces perturbations from the true attitude.
 The estimate is not perfect however, as can be seen in a slight deviation $q_2$ between 25s and 35s.\footnote{This .png makes it hard to see, the original plot has a higher resolution.}
 The velocity estimate (top right) shows by far the largest deviation from the true values.
 There is no measurement available for the velocity, so this estimate relies largely on accelerometer and gyroscope data.
 While tuning, a strong coupling between velocity and attitude was noticed. 
-As the rocket is essentially in free fall the entire flight, the accelerometer cannot measure the gravity vector, and any gravitational acceleration is modelled with the rocket attitude, see Equation \ref{eq:meas-veldot}.
+As the rocket is essentially in free fall the entire flight, the accelerometer cannot measure the gravity vector, and any gravitational acceleration is modelled with the rocket attitude, see \autoref{eq:meas-veldot}.
 Also, as the rocket is oriented vertical, the forward velocity is the change in altitude ($v_x \approx \dot {alt}$), so there is a strong coupling of forward velocity to the barometer data / its estimated altitude.
 The velocity deviations become larger near apogee, where the rocket slows down and pitches over, before speeding up again.
 
@@ -186,11 +188,11 @@ The process frequency is chosen as $\omega_s = 200\mathrm{Hz}$ to leave some mar
 
 \subsubsection{Numerics}
 The Jacobians $F$ and $H$ are computed numerically. 
-Numerical methods for finite differentiation are shown in Section \ref{sec:numerical-jacobians}.
+Numerical methods for finite differentiation are shown in \autoref{sec:numerical-jacobians}.
 
 For the prediction step, numerical solvers are implemented to compute the solutions of the IVPs.
 Here, \textit{explicit Euler} is used to compute a discrete state update.
-%In this case these methods are \textit{Runge-Kutta(4)} for the state prediction and \textit{Heun's method} for the state covariance (see Section \ref{sec:numerical-integration}).
+%In this case these methods are \textit{Runge-Kutta(4)} for the state prediction and \textit{Heun's method} for the state covariance (see \autoref{sec:numerical-integration}).
 The methods are picked as a trade-off between accuracy and computational effort.
 
 \subsubsection{Quaternions}

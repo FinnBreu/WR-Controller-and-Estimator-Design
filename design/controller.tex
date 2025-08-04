@@ -5,7 +5,7 @@ This imposes some constraints on the controller design, as the whole state \ref{
 The model used for controller design is thus simplified to the state \ref{eq:controller-model-state}, using a linear parameter-varying system.
 
 The controller chosen for the canards is linear state feedback, where the feedback gains $K$ are computed by the \textit{Linear Quadratic Regulator} (LQR) method \cite{werner2021, werner2021b}.
-The current state is determined by the state estimation algorithm (the Estimator is treated in Section \ref{sec:estimator}), as seen in Figure \ref{fig:controller-loop}.
+The current state is determined by the state estimation algorithm (the Estimator is treated in \autoref{sec:estimator}), as seen in \autoref{fig:controller-loop}.
 The loop is a two-degree-of-freedom design, where the reference signal is prescaled by a feedforward (reference) gain $K_{pre}$.
 To account for the non-linearity of the rocket dynamics the gains are selected from a gain schedule, which is a look-up table of gains for different parameters of the linear model from Equations \ref{eq:controller-model-state}, 
 \ref{eq:controller-model-ss}, and \ref{eq:controller-model-matrices}. 
@@ -21,7 +21,7 @@ To account for the non-linearity of the rocket dynamics the gains are selected f
 \subsection{Controller roll model}
 \label{sec:controller_model}
 The dynamic pressure and the canard coefficient $C_L$ are the scheduling variables of the controller.
-The concocted state $x_R$ for the roll model (Equation \ref{eq:controller-model-state}) and the flight condition (Equation \ref{eq:controller-model-fc}) are
+The concocted state $x_R$ for the roll model (\autoref{eq:controller-model-state}) and the flight condition (\autoref{eq:controller-model-fc}) are
 \begin{align}
     x_R &= \begin{bmatrix} \phi & \omega_x & \delta \end{bmatrix}^T 
     & 
@@ -97,7 +97,7 @@ A large variety of design points are chosen, both along the nominal flight profi
 Design points for the condition $L_\delta = 0$ are omitted from the tuning process, as the system is not controllable there.
 The control gains for all design points are computed beforehand and stored in a look-up table.
 In flight, the control algorithms interpolate the gains from the look-up table according to the current state estimate. 
-The pre-computed feedback gains for the roll model are shown in Figure \ref{fig:controller-surfaces}, plotted over the scheduling variables $\bar p$ and $C_L$.
+The pre-computed feedback gains for the roll model are shown in \autoref{fig:controller-surfaces}, plotted over the scheduling variables $\bar p$ and $C_L$.
 To note is the discontinuity at $\bar p = 0$ and especially at $C_L = 0$, where no feasible design points exist. 
 The feedback gains are interpolated over this split.
 
@@ -142,7 +142,7 @@ with Matlab's \texttt{lqr} function.
 For the discrete controller, the function \texttt{lqrd}($A, B, Q, R, dt$) is used to directly account for discrete dynamics with sampling time $dt$, but using a continuous-time system (A,B). 
 To note: for fast sampling times (much higher sampling frequency than the bandwidth of the model), the feedback gains of \texttt{lqr} and \texttt{lqrd} become approximately equal.
 The method is tuned by adjusting the weighting matrices $Q_c$ and $R_c$.
-As shown in section \ref{sec:controller-theory}, the matrix $Q_c$ contains the weights for penalizing the state error, while the matrix $R_c$ weighs the expended control effort.
+As shown in \autoref{sec:controller-theory}, the matrix $Q_c$ contains the weights for penalizing the state error, while the matrix $R_c$ weighs the expended control effort.
 
 The scalar reference gain $K_{pre}$ is computed for a steady state gain of 1, as
 \begin{align}
@@ -153,10 +153,10 @@ With $C = \begin{bmatrix} 1 & 0 & 0 \end{bmatrix}$, the channel $r \to \phi$ is 
 The channel $r \to \omega_x$ could also be selected via $C = \begin{bmatrix} 0 & 1 & 0 \end{bmatrix}$, this would result in tracking of the roll rate.
 
 The gains $K$ and $K_{pre}$ can be precomputed for each combination of parameters $A(\hat x_{FC})$.
-As gain scheduling is used to account for slowly-varying parameters, the gains are be computed for each design point $x_s$, and combined to a look-up table (see Section \ref{sec:controller-scheduling}).
+As gain scheduling is used to account for slowly-varying parameters, the gains are be computed for each design point $x_s$, and combined to a look-up table (see \autoref{sec:controller-scheduling}).
 This way the implemented controller does not need to compute the gains with the LQR method, but can just select the gains from the gain scheduling table. 
 
-The requirements of the control loop are shown in Table \ref{tab:controller_loopshape}.
+The requirements of the control loop are shown in \autoref{tab:controller_loopshape}.
 \begin{table}[ht]
     \centering
     \begin{tabularx}{\linewidth}{c c | c c | X }
@@ -166,7 +166,7 @@ The requirements of the control loop are shown in Table \ref{tab:controller_loop
          0 & 20 & 0.1 & 20 & Steady-state gain for disturbance rejection \\
          $\omega_B-$1dec & -20/dec & $\omega_B$+1dec & -30/dec & Closed-loop robustness
     \end{tabularx}
-    \caption{Loop shape requirements}
+    \caption{Loop shape requirements \cite{theis2023}.}
     \label{tab:controller_loopshape}
 \end{table}
 
@@ -175,7 +175,7 @@ The open-loop with controller is (with $C=I$)
     L(s) &=  K_{pre}\,  K \, C \, \left[sI- A\right]^{-1} B
 \end{align}
 which results in different $L$ for every flight condition.
-The loop shapes of different $L$ are shown in Figure \ref{fig:controller_loopshape}.
+The loop shapes of different $L$ are shown in \autoref{fig:controller_loopshape}.
 
 The rocket loop without controller is shown in blue on the rightmost side. 
 While it satisfies the steady-state and high-frequency gain requirements, the high slope in the crossover region would result in an unstable closed-loop.
@@ -196,7 +196,7 @@ The high-frequency requirement is however violated, requiring a lower bandwidth.
 To analyze some aspects of the control loop, the closed-loop responses are analyzed.
 The closed-loop is technically a sampled-data system, with continuous time (the rocket) and discrete time (estimator and controller) dynamics.
 For a high sampling rate (short time periods between control outputs), the discrete-time and the continuous-time closed-loop are approximately equal. 
-The continuous-time dynamics are (from Equation \ref{eq:controller-closedloop})
+The continuous-time dynamics are (from \autoref{eq:controller-closedloop})
 $ \dot x_R = (A+BK) x_R + B K_{pre} r$ and $ y_R = C x_R $, with $C = \begin{bmatrix} 1 & 0 & 0 \end{bmatrix}$ for the $r \to \phi$ channel.
 
 The weighting matrices are chosen as 
@@ -208,7 +208,7 @@ The weighting matrices are chosen as
     R_c &= (1 \cdot 10^{-3})\,  \bar p
 \end{align}
 
-The closed-loop step response for a collection of parameters (here varying velocities) is shown in Figure \ref{fig:controller-steps}.
+The closed-loop step response for a collection of parameters (here varying velocities) is shown in \autoref{fig:controller-steps}.
 
 \begin{figure}[ht!]
     \centering
@@ -217,7 +217,7 @@ The closed-loop step response for a collection of parameters (here varying veloc
     \label{fig:controller-steps}
 \end{figure}
 
-The Bode plots of the closed-loop for a collection of parameters (here varying velocities) is shown in Figure \ref{fig:controller-bodes}.
+The Bode plots of the closed-loop for a collection of parameters (here varying velocities) is shown in \autoref{fig:controller-bodes}.
 
 \begin{figure}[ht!]
     \centering
